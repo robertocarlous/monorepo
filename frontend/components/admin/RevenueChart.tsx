@@ -11,6 +11,10 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { TrendingUp } from "lucide-react";
+import { AreaChartSkeleton } from "./ChartSkeleton";
+import { ChartEmptyState } from "./ChartEmptyState";
+import { ChartErrorState } from "./ChartErrorState";
 
 export interface RevenueTimelineItem {
   date: string;
@@ -21,6 +25,8 @@ export interface RevenueTimelineItem {
 export interface RevenueChartProps {
   data?: RevenueTimelineItem[];
   isLoading?: boolean;
+  error?: boolean;
+  onRetry?: () => void;
   onRangeChange?: (range: "7d" | "30d" | "90d") => void;
 }
 
@@ -80,6 +86,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export function RevenueChart({
   data = [],
   isLoading = false,
+  error = false,
+  onRetry,
   onRangeChange,
 }: RevenueChartProps) {
   const [activeRange, setActiveRange] = useState<"7d" | "30d" | "90d">("30d");
@@ -136,22 +144,25 @@ export function RevenueChart({
   };
 
   if (isLoading) {
+    return <AreaChartSkeleton />;
+  }
+
+  if (error) {
     return (
-      <div className="border-3 border-foreground bg-card p-6 shadow-[6px_6px_0px_0px_rgba(26,26,26,1)] animate-pulse flex flex-col justify-between h-[360px]">
-        <div className="flex justify-between items-center mb-4">
-          <div className="h-6 w-48 bg-muted border-2 border-foreground/10"></div>
-          <div className="flex gap-1.5">
-            <div className="h-8 w-12 bg-muted border-2 border-foreground/10"></div>
-            <div className="h-8 w-12 bg-muted border-2 border-foreground/10"></div>
-          </div>
-        </div>
-        <div className="flex-1 w-full bg-muted border-2 border-foreground/10"></div>
+      <div className="border-3 border-foreground bg-card p-6 shadow-[6px_6px_0px_0px_rgba(26,26,26,1)] h-[360px]">
+        <ChartErrorState onRetry={onRetry} />
       </div>
     );
   }
 
+  const totalRevenue = pivotedData.reduce((sum, d) => sum + (d.total || 0), 0);
+
   return (
-    <div className="border-3 border-foreground bg-card p-6 shadow-[6px_6px_0px_0px_rgba(26,26,26,1)] flex flex-col justify-between h-[360px] transition-all hover:shadow-[3px_3px_0px_0px_rgba(26,26,26,1)] hover:translate-x-0.5 hover:translate-y-0.5">
+    <div
+      className="border-3 border-foreground bg-card p-6 shadow-[6px_6px_0px_0px_rgba(26,26,26,1)] flex flex-col justify-between h-[360px] transition-all hover:shadow-[3px_3px_0px_0px_rgba(26,26,26,1)] hover:translate-x-0.5 hover:translate-y-0.5"
+      role="figure"
+      aria-label={`Platform Revenue chart. Total revenue: ${formatFullCurrency(totalRevenue)} over ${pivotedData.length} days.`}
+    >
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="font-mono text-lg font-black uppercase tracking-tight">Platform Revenue</h3>
@@ -179,10 +190,35 @@ export function RevenueChart({
 
       <div className="flex-1 w-full min-h-0">
         {pivotedData.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-foreground/30 font-mono text-sm text-muted-foreground p-4">
-            No revenue recorded in this timeframe
-          </div>
+          <ChartEmptyState
+            title="No revenue recorded in this timeframe"
+            description="No revenue entries found for the selected period. Try a different date range."
+            icon={<TrendingUp className="w-8 h-8 mb-2 text-muted-foreground/50" aria-hidden="true" />}
+          />
         ) : (
+          <>
+            {/* Screen-reader accessible data table fallback */}
+            <table className="sr-only" aria-label="Revenue timeline data">
+              <caption>Daily revenue breakdown by fee type</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Platform Fee</th>
+                  <th scope="col">Underwriting Fee</th>
+                  <th scope="col">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pivotedData.map((row) => (
+                  <tr key={row.date}>
+                    <td>{formatDateLabel(row.date)}</td>
+                    <td>{formatFullCurrency(row["Platform Fee"])}</td>
+                    <td>{formatFullCurrency(row["Underwriting Fee"])}</td>
+                    <td>{formatFullCurrency(row.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={pivotedData}
@@ -243,6 +279,7 @@ export function RevenueChart({
               />
             </AreaChart>
           </ResponsiveContainer>
+          </>
         )}
       </div>
     </div>

@@ -1,6 +1,7 @@
 import React from "react";
 import { ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area } from "recharts";
+import { KPICardSkeleton } from "./ChartSkeleton";
 
 export interface KPICardProps {
   title: string;
@@ -31,19 +32,15 @@ export function KPICard({
   const isNegative = change !== undefined && change < 0;
 
   if (isLoading) {
-    return (
-      <div className="border-3 border-foreground bg-card p-6 shadow-[4px_4px_0px_0px_rgba(26,26,26,1)] animate-pulse flex flex-col justify-between h-40">
-        <div>
-          <div className="h-4 w-24 bg-muted border-2 border-foreground/10 mb-2"></div>
-          <div className="h-8 w-32 bg-muted border-2 border-foreground/10"></div>
-        </div>
-        <div className="h-4 w-40 bg-muted border-2 border-foreground/10"></div>
-      </div>
-    );
+    return <KPICardSkeleton />;
   }
 
   return (
-    <div className="border-3 border-foreground bg-card p-6 shadow-[4px_4px_0px_0px_rgba(26,26,26,1)] flex flex-col justify-between relative overflow-hidden group hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(26,26,26,1)] transition-all h-40">
+    <div
+      className="border-3 border-foreground bg-card p-6 shadow-[4px_4px_0px_0px_rgba(26,26,26,1)] flex flex-col justify-between relative overflow-hidden group hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(26,26,26,1)] transition-all h-40"
+      role="region"
+      aria-label={`${title}: ${value}${change !== undefined ? `, ${change > 0 ? "up" : "down"} ${Math.abs(change)}% ${changeLabel}` : ""}`}
+    >
       {/* Top Section */}
       <div className="flex justify-between items-start z-10">
         <div>

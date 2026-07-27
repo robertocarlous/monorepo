@@ -11,6 +11,10 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
+import { BarChart3 } from "lucide-react";
+import { BarChartSkeleton } from "./ChartSkeleton";
+import { ChartEmptyState } from "./ChartEmptyState";
+import { ChartErrorState } from "./ChartErrorState";
 
 export interface DealFunnelChartProps {
   data?: {
@@ -21,6 +25,8 @@ export interface DealFunnelChartProps {
     defaulted: number;
   };
   isLoading?: boolean;
+  error?: boolean;
+  onRetry?: () => void;
 }
 
 // Custom Neobrutalist Tooltip — declared at module level to avoid creating during render
@@ -45,12 +51,15 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-export function DealFunnelChart({ data, isLoading = false }: DealFunnelChartProps) {
+export function DealFunnelChart({ data, isLoading = false, error = false, onRetry }: DealFunnelChartProps) {
   if (isLoading) {
+    return <BarChartSkeleton />;
+  }
+
+  if (error) {
     return (
-      <div className="border-3 border-foreground bg-card p-6 shadow-[6px_6px_0px_0px_rgba(26,26,26,1)] animate-pulse flex flex-col justify-between h-[360px]">
-        <div className="h-6 w-48 bg-muted border-2 border-foreground/10 mb-4"></div>
-        <div className="flex-1 w-full bg-muted border-2 border-foreground/10"></div>
+      <div className="border-3 border-foreground bg-card p-6 shadow-[6px_6px_0px_0px_rgba(26,26,26,1)] h-[360px]">
+        <ChartErrorState onRetry={onRetry} />
       </div>
     );
   }
@@ -68,7 +77,11 @@ export function DealFunnelChart({ data, isLoading = false }: DealFunnelChartProp
     : [];
 
   return (
-    <div className="border-3 border-foreground bg-card p-6 shadow-[6px_6px_0px_0px_rgba(26,26,26,1)] flex flex-col justify-between h-[360px] transition-all hover:shadow-[3px_3px_0px_0px_rgba(26,26,26,1)] hover:translate-x-0.5 hover:translate-y-0.5">
+    <div
+      className="border-3 border-foreground bg-card p-6 shadow-[6px_6px_0px_0px_rgba(26,26,26,1)] flex flex-col justify-between h-[360px] transition-all hover:shadow-[3px_3px_0px_0px_rgba(26,26,26,1)] hover:translate-x-0.5 hover:translate-y-0.5"
+      role="figure"
+      aria-label={`Deal Funnel Status chart. ${totalDeals} total deals: ${data?.draft || 0} draft, ${data?.active || 0} active, ${data?.at_risk || 0} at risk, ${data?.completed || 0} completed, ${data?.defaulted || 0} defaulted.`}
+    >
       <div>
         <h3 className="font-mono text-lg font-black uppercase tracking-tight">Deal Funnel Status</h3>
         <p className="font-mono text-xs text-muted-foreground mt-0.5 mb-4">
@@ -78,11 +91,34 @@ export function DealFunnelChart({ data, isLoading = false }: DealFunnelChartProp
 
       <div className="flex-1 w-full min-h-0">
         {totalDeals === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-foreground/30 font-mono text-sm text-muted-foreground p-4">
-            No deal data available
-          </div>
+          <ChartEmptyState
+            title="No deal data available"
+            description="No deals found for the current filters. Try adjusting your criteria."
+            icon={<BarChart3 className="w-8 h-8 mb-2 text-muted-foreground/50" aria-hidden="true" />}
+          />
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
+          <>
+            {/* Screen-reader accessible data table fallback */}
+            <table className="sr-only" aria-label="Deal funnel data">
+              <caption>Deal status breakdown across the platform lifecycle</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Status</th>
+                  <th scope="col">Count</th>
+                  <th scope="col">Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                {chartData.map((item) => (
+                  <tr key={item.name}>
+                    <td>{item.name}</td>
+                    <td>{item.count}</td>
+                    <td>{totalDeals > 0 ? ((item.count / totalDeals) * 100).toFixed(1) : 0}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
               margin={{ top: 10, right: 10, left: -25, bottom: 0 }}
@@ -117,6 +153,7 @@ export function DealFunnelChart({ data, isLoading = false }: DealFunnelChartProp
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          </>
         )}
       </div>
     </div>
