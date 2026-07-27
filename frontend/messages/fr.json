@@ -98,6 +98,26 @@
     "notFound": "Non trouvé",
     "validationError": "Erreur de validation"
   },
+  "payment": {
+    "fullPayment": "Paiement complet",
+    "reviewDistribution": "Vérifiez la répartition de votre paiement avant de confirmer.",
+    "rewardDistribution": "Répartition des récompenses",
+    "platformFee": "Frais de plateforme",
+    "platformFeeSubLabel": "Couvre les opérations de la plateforme",
+    "reporterReward": "Récompense du signaleur",
+    "reporterRewardSubLabel": "Versé au signaleur de la propriété",
+    "noReporter": "Aucun signaleur pour cette annonce",
+    "landlordPayout": "Versement au propriétaire",
+    "totalCharged": "Total facturé",
+    "confirmPayment": "Confirmer le paiement",
+    "processing": "Traitement en cours…",
+    "receipt": "Reçu de paiement",
+    "reference": "Référence",
+    "paymentConfirmed": "Paiement confirmé",
+    "loadingDetails": "Chargement des détails de paiement…",
+    "somethingWentWrong": "Quelque chose s'est mal passé",
+    "tryAgain": "Réessayer"
+  },
   "about": {
     "badge": "[TR:fr] ABOUT US",
     "title": "[TR:fr] Making Housing <accessible>Accessible</accessible> for All Nigerians",
