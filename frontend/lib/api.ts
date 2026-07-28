@@ -7,6 +7,17 @@ const apiVersion = "/api/v1";
 export const ACCOUNT_FROZEN_MESSAGE =
   "Account frozen due to negative balance. Please top up to continue.";
 
+export class TimeoutError extends Error {
+  constructor(ms: number) {
+    super(`Request timed out after ${ms}ms`);
+    this.name = "TimeoutError";
+  }
+}
+
+export interface RequestOptions extends RequestInit {
+  timeout?: number;
+}
+
 export class ApiError extends Error {
   code?: string;
   status: number;
@@ -108,7 +119,7 @@ async function parseBackendErrorResponse(
 
 export async function apiFetch<T>(
   path: string,
-  options?: RequestInit
+  options?: RequestOptions
 ): Promise<T> {
   if (!baseUrl) {
     throw new Error("Missing NEXT_PUBLIC_BACKEND_URL");
@@ -127,6 +138,15 @@ export async function apiFetch<T>(
   const method = (options?.method ?? "GET").toUpperCase();
   await attachCsrfHeaderIfNeeded(headers, method)
 
+  const timeout = options?.timeout;
+  const controller = new AbortController();
+  const signal = controller.signal;
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  if (timeout && timeout > 0) {
+    timeoutId = setTimeout(() => controller.abort(), timeout);
+  }
+
   try {
     if (shouldQueueOfflineRequest(method)) {
       enqueueOfflineRequest({
@@ -142,10 +162,12 @@ export async function apiFetch<T>(
       } as T
     }
 
+    const { timeout: _timeout, headers: _origHeaders, ...fetchOptions } = options ?? {};
     const res = await fetch(`${baseUrl}${apiVersion}${path}`, {
       cache: "no-store",
       headers,
-      ...options,
+      signal,
+      ...fetchOptions,
     });
 
     if (!res.ok) {
@@ -166,23 +188,30 @@ export async function apiFetch<T>(
     return res.json();
 
   } catch (error) {
-    // Re-throw ApiError as-is
     if (error instanceof ApiError) {
       throw error
     }
 
-    // Handle network errors
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new TimeoutError(timeout!);
+    }
+
     if (error instanceof TypeError && error.message === "Failed to fetch") {
       throw new Error(
         `Cannot connect to backend at ${baseUrl}. Please ensure the backend server is running.`
       );
     }
     throw error;
+  } finally {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
   }
 }
 
-export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+export async function apiPost<T>(path: string, body: unknown, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<T> {
   return apiFetch<T>(path, {
+    ...options,
     method: "POST",
     body: JSON.stringify(body),
   });
